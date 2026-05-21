@@ -46,6 +46,14 @@ def make_settings() -> Settings:
     )
 
 
+async def test_mcp_exposes_search_archive_tool_for_discovery() -> None:
+    mcp = create_mcp(make_settings(), search_provider=FakeProvider())
+
+    tools = await mcp.list_tools()
+
+    assert [tool.name for tool in tools] == ["search_archive"]
+
+
 async def test_search_archive_tool_calls_provider_with_validated_request() -> None:
     provider = FakeProvider()
     mcp = create_mcp(make_settings(), search_provider=provider)
