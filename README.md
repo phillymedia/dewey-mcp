@@ -112,6 +112,68 @@ set +a
 uv run dewey-mcp
 ```
 
+## Docker preflight
+
+Before pushing an image for Azure Container Apps, build and run the production
+container locally:
+
+```bash
+docker build -t dewey-mcp:local .
+docker run --rm --name dewey-mcp-local --env-file .env.local -p 8000:8000 dewey-mcp:local
+```
+
+Use `.env` instead of `.env.local` if that is where your local settings live.
+`--env-file` passes values into the running container process; it does not bake
+secrets into the image.
+
+In another terminal, verify that the container is listening and that Azure
+Search is reachable:
+
+```bash
+curl http://127.0.0.1:8000/livez
+curl http://127.0.0.1:8000/readyz
+```
+
+`/livez` should return `{"status":"ok"}` when the server process is running.
+`/readyz` should return `{"status":"ready"}` when the required configuration is
+loaded and the Azure Search provider probe succeeds.
+
+Follow container logs while testing:
+
+```bash
+docker logs -f dewey-mcp-local
+```
+
+Stop the preflight container from another terminal:
+
+```bash
+docker stop dewey-mcp-local
+```
+
+If port `8000` is already in use locally, map a different host port while still
+leaving the container port at `8000`:
+
+```bash
+docker run --rm --name dewey-mcp-local --env-file .env.local -p 8080:8000 dewey-mcp:local
+curl http://127.0.0.1:8080/livez
+curl http://127.0.0.1:8080/readyz
+```
+
+For Azure Container App parity, confirm the image listens on container port
+`8000`, the MCP endpoint is `/mcp`, the liveness endpoint is `/livez`, and the
+readiness endpoint is `/readyz` unless the matching environment variables
+override those defaults. The Container App must provide
+`AZURE_SEARCH_ENDPOINT`, `AZURE_SEARCH_INDEX_NAME`, and
+`AZURE_SEARCH_SEMANTIC_CONFIGURATION`. Local API-key authentication is the
+simplest preflight path; if `AZURE_SEARCH_API_KEY` is omitted, the container uses
+default Azure credentials, which usually need additional local credential setup
+outside Azure.
+
+If the container exits with invalid configuration, check the required Azure
+Search settings. If `/livez` succeeds but `/readyz` returns `503`, the process is
+running but Azure Search configuration, authentication, network access, or
+provider readiness is failing.
+
 ## MCP client configuration
 
 Dewey exposes MCP over streamable HTTP at `MCP_PATH`, which defaults to `/mcp`.
