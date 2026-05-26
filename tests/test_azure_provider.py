@@ -72,7 +72,7 @@ async def test_azure_provider_maps_index_fields_to_result_contract() -> None:
         search_client=fake_client,
     )
 
-    response = await provider.search(SearchRequest(search_text="hostage"))
+    response = await provider.search(SearchRequest(query="hostage"))
 
     assert response.count == 1
     assert response.results[0].model_dump() == {
@@ -118,7 +118,7 @@ async def test_azure_provider_can_use_explicit_index_field_mapping() -> None:
         field_mapping=field_mapping,
     )
 
-    response = await provider.search(SearchRequest(search_text="hostage"))
+    response = await provider.search(SearchRequest(query="hostage"))
 
     assert fake_client.last_kwargs is not None
     assert fake_client.last_kwargs["select"] == [
@@ -143,7 +143,7 @@ async def test_azure_provider_uses_hybrid_search_for_normal_search_text() -> Non
         search_client=fake_client,
     )
 
-    await provider.search(SearchRequest(search_text="hostage", limit=5))
+    await provider.search(SearchRequest(query="hostage", limit=5))
 
     assert fake_client.last_kwargs is not None
     assert fake_client.last_kwargs["search_text"] == "hostage"
@@ -161,7 +161,7 @@ async def test_azure_provider_omits_vector_query_for_search_everything() -> None
         search_client=fake_client,
     )
 
-    await provider.search(SearchRequest(search_text="*"))
+    await provider.search(SearchRequest(query="*"))
 
     assert fake_client.last_kwargs is not None
     assert fake_client.last_kwargs["search_text"] == "*"

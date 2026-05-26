@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import date
 
 import pytest
 from pydantic import ValidationError
@@ -7,63 +7,71 @@ from dewey_mcp.models import SearchRequest
 
 
 def test_search_request_defaults_limit_to_10() -> None:
-    request = SearchRequest(search_text="Iran hostage crisis")
+    request = SearchRequest(query="Iran hostage crisis")
 
     assert request.limit == 10
 
 
+def test_search_request_defaults_authors_to_none() -> None:
+    request = SearchRequest(query="Iran hostage crisis")
+
+    assert request.authors is None
+
+
 def test_search_request_allows_search_everything_operator() -> None:
-    request = SearchRequest(search_text=" * ")
+    request = SearchRequest(query=" * ")
 
-    assert request.search_text == "*"
+    assert request.query == "*"
 
 
-def test_search_request_rejects_blank_search_text() -> None:
+def test_search_request_rejects_blank_query() -> None:
     with pytest.raises(ValidationError):
-        SearchRequest(search_text=" ")
+        SearchRequest(query=" ")
 
 
 def test_search_request_enforces_hard_limit() -> None:
     with pytest.raises(ValidationError):
-        SearchRequest(search_text="Watergate", limit=21)
+        SearchRequest(query="Watergate", limit=21)
 
 
-def test_published_date_filter_accepts_date_only_half_open_range() -> None:
+def test_search_request_parses_date_strings() -> None:
     request = SearchRequest(
-        search_text="Watergate",
-        filters=[
-            {
-                "field": "published_date",
-                "start": "1979-11-01",
-                "end": "1979-12-01",
-            }
-        ],
+        query="Watergate",
+        start_date="1979-11-01",
+        end_date="1979-12-01",
     )
 
-    date_filter = request.filters[0]
-    assert date_filter.start == datetime(1979, 11, 1, tzinfo=UTC)
-    assert date_filter.end == datetime(1979, 12, 1, tzinfo=UTC)
+    assert request.start_date == date(1979, 11, 1)
+    assert request.end_date == date(1979, 12, 1)
 
 
-def test_published_date_filter_rejects_non_positive_range() -> None:
+def test_search_request_rejects_inverted_date_range() -> None:
     with pytest.raises(ValidationError):
         SearchRequest(
-            search_text="Watergate",
-            filters=[
-                {
-                    "field": "published_date",
-                    "start": "1979-12-01",
-                    "end": "1979-11-01",
-                }
-            ],
+            query="Watergate",
+            start_date="1979-12-01",
+            end_date="1979-11-01",
         )
 
 
-def test_author_filter_normalizes_value() -> None:
+def test_search_request_allows_open_ended_date_range() -> None:
+    only_start = SearchRequest(query="x", start_date="2024-01-01")
+    only_end = SearchRequest(query="x", end_date="2024-12-31")
+
+    assert only_start.end_date is None
+    assert only_end.start_date is None
+
+
+def test_search_request_normalizes_authors() -> None:
     request = SearchRequest(
-        search_text="election",
-        filters=[{"field": "author", "value": " George Will "}],
+        query="election",
+        authors=[" George Will ", "george will", "", "Jane Doe"],
     )
 
-    author_filter = request.filters[0]
-    assert author_filter.value == "George Will"
+    assert request.authors == ["George Will", "Jane Doe"]
+
+
+def test_search_request_returns_none_when_authors_collapse_to_empty() -> None:
+    request = SearchRequest(query="election", authors=["  ", ""])
+
+    assert request.authors is None
