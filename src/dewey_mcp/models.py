@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
-from typing import Annotated, Literal
+from datetime import date, datetime
+from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -11,95 +11,89 @@ MAX_SEARCH_LIMIT = 20
 DEFAULT_SEARCH_LIMIT = 10
 
 
-def _parse_datetime(value: object) -> datetime:
-    if isinstance(value, datetime):
-        parsed = value
-    elif isinstance(value, date):
-        parsed = datetime(value.year, value.month, value.day, tzinfo=UTC)
-    elif isinstance(value, str):
-        normalized = value.strip()
-        if not normalized:
-            raise ValueError("datetime value must not be blank")
-        if normalized.endswith("Z"):
-            normalized = f"{normalized[:-1]}+00:00"
-        try:
-            parsed = datetime.fromisoformat(normalized)
-        except ValueError:
-            parsed_date = date.fromisoformat(value)
-            parsed = datetime(
-                parsed_date.year,
-                parsed_date.month,
-                parsed_date.day,
-                tzinfo=UTC,
-            )
-    else:
-        raise ValueError("datetime value must be an ISO date or datetime")
-
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=UTC)
-    return parsed
-
-
-class PublishedDateFilter(BaseModel):
-    """Half-open Published Date range filter."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    field: Literal["published_date"]
-    start: datetime
-    end: datetime
-
-    @field_validator("start", "end", mode="before")
-    @classmethod
-    def parse_datetime(cls, value: object) -> datetime:
-        return _parse_datetime(value)
-
-    @model_validator(mode="after")
-    def validate_range(self) -> PublishedDateFilter:
-        if self.start >= self.end:
-            raise ValueError("published_date filter start must be before end")
-        return self
-
-
-class AuthorFilter(BaseModel):
-    """Author text-match filter."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    field: Literal["author"]
-    value: str = Field(min_length=1)
-
-    @field_validator("value")
-    @classmethod
-    def normalize_value(cls, value: str) -> str:
-        normalized = value.strip()
-        if not normalized:
-            raise ValueError("author filter value must not be blank")
-        return normalized
-
-
-SearchFilter = Annotated[
-    PublishedDateFilter | AuthorFilter,
-    Field(discriminator="field"),
+AuthorList = Annotated[
+    list[str],
+    Field(
+        min_length=1,
+        description=(
+            "Optional list of authors. Results must match one of " "these authors."
+        ),
+    ),
 ]
 
 
 class SearchRequest(BaseModel):
     """Structured MCP search request."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "query": "university of the arts closure",
+                    "start_date": "2024-01-01",
+                    "end_date": "2024-12-31",
+                    "authors": ["John Smith", "Jane Doe"],
+                }
+            ]
+        },
+    )
 
-    search_text: str
-    filters: list[SearchFilter] = Field(default_factory=list)
+    query: str = Field(
+        min_length=1,
+        description="Natural-language search query. Use '*' to search everything.",
+    )
+
+    start_date: date | None = Field(
+        default=None,
+        description="Inclusive lower bound for publish_date, in YYYY-MM-DD format.",
+    )
+
+    end_date: date | None = Field(
+        default=None,
+        description="Inclusive upper bound for publish_date, in YYYY-MM-DD format.",
+    )
+
+    authors: AuthorList | None = None
+
     limit: int = Field(default=DEFAULT_SEARCH_LIMIT, ge=1, le=MAX_SEARCH_LIMIT)
 
-    @field_validator("search_text")
+    @field_validator("query")
     @classmethod
-    def normalize_search_text(cls, value: str) -> str:
+    def normalize_query(cls, value: str) -> str:
         normalized = value.strip()
         if not normalized:
-            raise ValueError("search_text is required and must not be blank")
+            raise ValueError(
+                "query is required and must not be blank. Use '*' to search everything."
+            )
         return normalized
+
+    @field_validator("authors")
+    @classmethod
+    def normalize_authors(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+
+        cleaned: list[str] = []
+        seen: set[str] = set()
+
+        for author in value:
+            normalized = author.strip()
+            if not normalized:
+                continue
+
+            key = normalized.casefold()
+            if key not in seen:
+                cleaned.append(normalized)
+                seen.add(key)
+
+        return cleaned or None
+
+    @model_validator(mode="after")
+    def validate_date_range(self) -> "SearchRequest":  # noqa: UP037
+        if self.start_date and self.end_date and self.start_date > self.end_date:
+            raise ValueError("start_date must be less than or equal to end_date.")
+        return self
 
 
 class SearchResult(BaseModel):

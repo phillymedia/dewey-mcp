@@ -20,6 +20,8 @@ dewey-mcp = "dewey_mcp.__main__:main"
 [dependency-groups]
 dev = [
     "black>=25.11.0",
+    "ipykernel>=7.2.0",
+    "openai>=2.37.0",
     "pre-commit>=4.5.0",
     "pytest>=9.0.1",
     "pytest-asyncio>=1.3.0",

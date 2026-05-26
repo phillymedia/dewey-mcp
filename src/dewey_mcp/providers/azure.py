@@ -120,8 +120,8 @@ class AzureArchiveSearchProvider:
             LOGGER.info(
                 "azure_search_completed",
                 extra={
-                    "search_text_length": len(request.search_text),
-                    "filter_fields": [item.field for item in request.filters],
+                    "query_length": len(request.query),
+                    "filter_fields": _request_filter_fields(request),
                     "requested_limit": request.limit,
                     "provider_latency_ms": round((monotonic() - started) * 1000, 2),
                 },
@@ -156,13 +156,13 @@ class AzureArchiveSearchProvider:
 
     async def _execute_search(self, request: SearchRequest) -> list[SearchResult]:
         filter_expression = build_azure_filter(
-            request.filters,
+            request,
             self.field_mapping.filter_field_names,
         )
         vector_queries = self._build_vector_queries(request)
 
         search_kwargs: dict[str, Any] = {
-            "search_text": request.search_text,
+            "search_text": request.query,
             "filter": filter_expression,
             "top": request.limit,
             "select": self.field_mapping.select_fields,
@@ -184,11 +184,11 @@ class AzureArchiveSearchProvider:
         self,
         request: SearchRequest,
     ) -> list[VectorizableTextQuery]:
-        if request.search_text == "*":
+        if request.query == "*":
             return []
         return [
             VectorizableTextQuery(
-                text=request.search_text,
+                text=request.query,
                 k_nearest_neighbors=request.limit,
                 fields=self.field_mapping.vector,
             )
@@ -205,6 +205,15 @@ class AzureArchiveSearchProvider:
             chunk_text=str(document[self.field_mapping.chunk_text]),
             score=float(document.get("@search.score") or 0.0),
         )
+
+
+def _request_filter_fields(request: SearchRequest) -> list[str]:
+    fields: list[str] = []
+    if request.start_date is not None or request.end_date is not None:
+        fields.append("published_date")
+    if request.authors:
+        fields.append("authors")
+    return fields
 
 
 def _is_retryable(exc: BaseException) -> bool:

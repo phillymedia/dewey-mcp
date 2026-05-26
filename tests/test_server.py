@@ -61,8 +61,8 @@ async def test_search_archive_tool_calls_provider_with_validated_request() -> No
     response = await mcp.call_tool(
         "search_archive",
         {
-            "search_text": "hostage",
-            "filters": [{"field": "author", "value": " George Will "}],
+            "query": "hostage",
+            "authors": [" George Will "],
             "limit": 5,
         },
     )
@@ -70,8 +70,8 @@ async def test_search_archive_tool_calls_provider_with_validated_request() -> No
     assert not response.isError
     assert response.structuredContent is not None
     assert response.structuredContent["count"] == 1
-    assert provider.requests[0].search_text == "hostage"
-    assert provider.requests[0].filters[0].value == "George Will"
+    assert provider.requests[0].query == "hostage"
+    assert provider.requests[0].authors == ["George Will"]
     assert provider.requests[0].limit == 5
 
 
@@ -80,7 +80,7 @@ async def test_search_archive_tool_returns_structured_provider_error() -> None:
 
     response = await mcp.call_tool(
         "search_archive",
-        {"search_text": "hostage"},
+        {"query": "hostage"},
     )
 
     assert response.isError

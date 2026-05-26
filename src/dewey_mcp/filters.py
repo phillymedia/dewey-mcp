@@ -1,11 +1,11 @@
-"""Translate typed Search Filters into provider filter expressions."""
+"""Translate flat SearchRequest fields into provider filter expressions."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import date, timedelta
 
-from dewey_mcp.models import AuthorFilter, PublishedDateFilter, SearchFilter
+from dewey_mcp.models import SearchRequest
 
 
 @dataclass(frozen=True)
@@ -17,42 +17,60 @@ class AzureFilterFieldNames:
 
 
 def build_azure_filter(
-    filters: list[SearchFilter],
+    request: SearchRequest,
     field_names: AzureFilterFieldNames,
 ) -> str | None:
-    """Build an Azure AI Search OData filter from typed filters."""
+    """Build an Azure AI Search OData filter from a SearchRequest."""
 
-    clauses = [_build_filter_clause(item, field_names) for item in filters]
+    clauses = [
+        clause
+        for clause in (
+            _published_date_clause(
+                request.start_date, request.end_date, field_names.publish_date
+            ),
+            _authors_clause(request.authors, field_names.authors),
+        )
+        if clause is not None
+    ]
     if not clauses:
         return None
     return " and ".join(f"({clause})" for clause in clauses)
 
 
-def _build_filter_clause(
-    search_filter: SearchFilter,
-    field_names: AzureFilterFieldNames,
-) -> str:
-    if isinstance(search_filter, PublishedDateFilter):
-        start = _format_azure_datetimeoffset(search_filter.start)
-        end = _format_azure_datetimeoffset(search_filter.end)
-        return (
-            f"{field_names.publish_date} ge {start} "
-            f"and {field_names.publish_date} lt {end}"
-        )
-    if isinstance(search_filter, AuthorFilter):
-        return (
-            f"search.ismatch('{_escape_odata_string(search_filter.value)}', "
-            f"'{_escape_odata_string(field_names.authors)}')"
-        )
-    raise TypeError(f"Unsupported search filter: {search_filter!r}")
+def _published_date_clause(
+    start: date | None,
+    end: date | None,
+    field: str,
+) -> str | None:
+    if start is None and end is None:
+        return None
+
+    parts: list[str] = []
+    if start is not None:
+        parts.append(f"{field} ge {_format_date_as_utc_midnight(start)}")
+    if end is not None:
+        # end_date is inclusive end-of-day; emit half-open lt next-day midnight.
+        next_midnight = _format_date_as_utc_midnight(end + timedelta(days=1))
+        parts.append(f"{field} lt {next_midnight}")
+    return " and ".join(parts)
 
 
-def _format_azure_datetimeoffset(value: datetime) -> str:
-    normalized = value
-    if normalized.tzinfo is None:
-        normalized = normalized.replace(tzinfo=UTC)
-    normalized = normalized.astimezone(UTC)
-    return normalized.isoformat(timespec="seconds").replace("+00:00", "Z")
+def _authors_clause(authors: list[str] | None, field: str) -> str | None:
+    if not authors:
+        return None
+
+    escaped_field = _escape_odata_string(field)
+    matches = [
+        f"search.ismatch('{_escape_odata_string(author)}', '{escaped_field}')"
+        for author in authors
+    ]
+    if len(matches) == 1:
+        return matches[0]
+    return " or ".join(matches)
+
+
+def _format_date_as_utc_midnight(value: date) -> str:
+    return f"{value.isoformat()}T00:00:00Z"
 
 
 def _escape_odata_string(value: str) -> str:

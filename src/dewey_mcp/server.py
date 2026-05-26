@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from datetime import date
 from time import monotonic
 from typing import Annotated
 
@@ -17,7 +18,6 @@ from starlette.responses import JSONResponse, Response
 from dewey_mcp.errors import DeweyMcpError, SearchProviderError
 from dewey_mcp.models import (
     DEFAULT_SEARCH_LIMIT,
-    SearchFilter,
     SearchRequest,
     SearchResponse,
 )
@@ -48,13 +48,21 @@ def create_mcp(
 
     @mcp.tool(structured_output=False)
     async def search_archive(
-        search_text: Annotated[
+        query: Annotated[
             str,
-            Field(description="Required Search Text. Use '*' to search everything."),
+            Field(description="Required search query. Use '*' to search everything."),
         ],
-        filters: Annotated[
-            list[SearchFilter] | None,
-            Field(description="Typed Search Filters combined with AND semantics."),
+        start_date: Annotated[
+            date | None,
+            Field(description="Inclusive lower bound for publish_date (YYYY-MM-DD)."),
+        ] = None,
+        end_date: Annotated[
+            date | None,
+            Field(description="Inclusive upper bound for publish_date (YYYY-MM-DD)."),
+        ] = None,
+        authors: Annotated[
+            list[str] | None,
+            Field(description="Optional list of authors; results match any one."),
         ] = None,
         limit: Annotated[
             int,
@@ -70,16 +78,18 @@ def create_mcp(
         request_started = monotonic()
         try:
             request = SearchRequest(
-                search_text=search_text,
-                filters=filters or [],
+                query=query,
+                start_date=start_date,
+                end_date=end_date,
+                authors=authors,
                 limit=limit,
             )
             response = await provider.search(request)
             LOGGER.info(
                 "search_archive_completed",
                 extra={
-                    "search_text_length": len(request.search_text),
-                    "filter_fields": [item.field for item in request.filters],
+                    "query_length": len(request.query),
+                    "filter_fields": _request_filter_fields(request),
                     "requested_limit": request.limit,
                     "result_count": response.count,
                     "latency_ms": round((monotonic() - request_started) * 1000, 2),
@@ -114,6 +124,15 @@ def create_mcp(
         return JSONResponse({"status": "ready"})
 
     return mcp
+
+
+def _request_filter_fields(request: SearchRequest) -> list[str]:
+    fields: list[str] = []
+    if request.start_date is not None or request.end_date is not None:
+        fields.append("published_date")
+    if request.authors:
+        fields.append("authors")
+    return fields
 
 
 def _success_tool_result(response: SearchResponse) -> CallToolResult:
