@@ -71,23 +71,7 @@ class SearchRequest(BaseModel):
     @field_validator("authors")
     @classmethod
     def normalize_authors(cls, value: list[str] | None) -> list[str] | None:
-        if value is None:
-            return None
-
-        cleaned: list[str] = []
-        seen: set[str] = set()
-
-        for author in value:
-            normalized = author.strip()
-            if not normalized:
-                continue
-
-            key = normalized.casefold()
-            if key not in seen:
-                cleaned.append(normalized)
-                seen.add(key)
-
-        return cleaned or None
+        return _normalize_author_list(value)
 
     @model_validator(mode="after")
     def validate_date_range(self) -> "SearchRequest":  # noqa: UP037
@@ -122,3 +106,110 @@ class SearchResponse(BaseModel):
     @classmethod
     def from_results(cls, results: list[SearchResult]) -> SearchResponse:
         return cls(results=results, count=len(results))
+
+
+class ImageSearchRequest(BaseModel):
+    """Structured MCP image search request."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "query": "city hall ribbon cutting",
+                    "start_date": "2024-01-01",
+                    "end_date": "2024-12-31",
+                    "authors": ["Jane Doe"],
+                }
+            ]
+        },
+    )
+
+    query: str = Field(
+        min_length=1,
+        description=(
+            "Natural-language image description search. Use '*' to search everything."
+        ),
+    )
+
+    start_date: date | None = Field(
+        default=None,
+        description="Inclusive lower bound for capture_date, in YYYY-MM-DD format.",
+    )
+
+    end_date: date | None = Field(
+        default=None,
+        description="Inclusive upper bound for capture_date, in YYYY-MM-DD format.",
+    )
+
+    authors: AuthorList | None = None
+
+    limit: int = Field(default=DEFAULT_SEARCH_LIMIT, ge=1, le=MAX_SEARCH_LIMIT)
+
+    @field_validator("query")
+    @classmethod
+    def normalize_query(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError(
+                "query is required and must not be blank. Use '*' to search everything."
+            )
+        return normalized
+
+    @field_validator("authors")
+    @classmethod
+    def normalize_authors(cls, value: list[str] | None) -> list[str] | None:
+        return _normalize_author_list(value)
+
+    @model_validator(mode="after")
+    def validate_date_range(self) -> "ImageSearchRequest":  # noqa: UP037
+        if self.start_date and self.end_date and self.start_date > self.end_date:
+            raise ValueError("start_date must be less than or equal to end_date.")
+        return self
+
+
+class ImageSearchResult(BaseModel):
+    """One matching image from the Image Archive."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    image_id: str
+    image_url: str | None = None
+    caption: str | None = None
+    description: str
+    authors: str | None = None
+    capture_date: datetime | None = None
+    score: float
+
+
+class ImageSearchResponse(BaseModel):
+    """Structured MCP image search response."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    results: list[ImageSearchResult]
+    count: int
+
+    @classmethod
+    def from_results(cls, results: list[ImageSearchResult]) -> ImageSearchResponse:
+        return cls(results=results, count=len(results))
+
+
+def _normalize_author_list(value: list[str] | None) -> list[str] | None:
+    if value is None:
+        return None
+
+    cleaned: list[str] = []
+    seen: set[str] = set()
+
+    for author in value:
+        normalized = author.strip()
+        if not normalized:
+            continue
+
+        key = normalized.casefold()
+        if key not in seen:
+            cleaned.append(normalized)
+            seen.add(key)
+
+    return cleaned or None

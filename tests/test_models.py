@@ -3,7 +3,7 @@ from datetime import date
 import pytest
 from pydantic import ValidationError
 
-from dewey_mcp.models import SearchRequest
+from dewey_mcp.models import ImageSearchRequest, SearchRequest
 
 
 def test_search_request_defaults_limit_to_10() -> None:
@@ -75,3 +75,30 @@ def test_search_request_returns_none_when_authors_collapse_to_empty() -> None:
     request = SearchRequest(query="election", authors=["  ", ""])
 
     assert request.authors is None
+
+
+def test_image_search_request_uses_same_limit_policy() -> None:
+    request = ImageSearchRequest(query="ribbon")
+
+    assert request.limit == 10
+    with pytest.raises(ValidationError):
+        ImageSearchRequest(query="ribbon", limit=21)
+
+
+def test_image_search_request_normalizes_query_and_authors() -> None:
+    request = ImageSearchRequest(
+        query=" ribbon ",
+        authors=[" Photo Staff ", "photo staff", ""],
+    )
+
+    assert request.query == "ribbon"
+    assert request.authors == ["Photo Staff"]
+
+
+def test_image_search_request_rejects_inverted_date_range() -> None:
+    with pytest.raises(ValidationError):
+        ImageSearchRequest(
+            query="ribbon",
+            start_date="2024-12-01",
+            end_date="2024-01-01",
+        )

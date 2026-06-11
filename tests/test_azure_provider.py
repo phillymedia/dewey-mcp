@@ -4,8 +4,13 @@ from typing import Any
 
 import pytest
 
-from dewey_mcp.models import SearchRequest
-from dewey_mcp.providers.azure import AzureArchiveSearchProvider, AzureIndexFieldMapping
+from dewey_mcp.models import ImageSearchRequest, SearchRequest
+from dewey_mcp.providers.azure import (
+    AzureArchiveSearchProvider,
+    AzureImageIndexFieldMapping,
+    AzureImageSearchProvider,
+    AzureIndexFieldMapping,
+)
 from dewey_mcp.settings import Settings
 
 
@@ -39,6 +44,8 @@ def make_settings() -> Settings:
         azure_search_endpoint="https://example.search.windows.net",
         azure_search_index_name="archive",
         azure_search_semantic_configuration="semantic",
+        azure_image_search_index_name="images",
+        azure_image_search_semantic_configuration="image-semantic",
         azure_search_api_key="secret",
     )
 
@@ -49,6 +56,12 @@ def test_settings_do_not_define_azure_index_field_env_mapping() -> None:
         make_settings(),
         "azure_search_field_title",
     )
+
+
+def test_settings_define_image_index_without_field_env_mapping() -> None:
+    assert "azure_image_search_index_name" in Settings.model_fields
+    assert "azure_image_search_semantic_configuration" in Settings.model_fields
+    assert "azure_image_search_field_description" not in Settings.model_fields
 
 
 @pytest.mark.asyncio
@@ -162,6 +175,121 @@ async def test_azure_provider_omits_vector_query_for_search_everything() -> None
     )
 
     await provider.search(SearchRequest(query="*"))
+
+    assert fake_client.last_kwargs is not None
+    assert fake_client.last_kwargs["search_text"] == "*"
+    assert "vector_queries" not in fake_client.last_kwargs
+    assert "query_type" not in fake_client.last_kwargs
+
+
+@pytest.mark.asyncio
+async def test_azure_image_provider_maps_index_fields_to_result_contract() -> None:
+    fake_client = FakeSearchClient(
+        [
+            {
+                "image_id": "image-1",
+                "image_url": "https://example.test/image-1.jpg",
+                "caption": "Ribbon cutting",
+                "description": "Officials cut a ribbon at city hall.",
+                "authors": "Photo Staff",
+                "capture_date": datetime(2024, 5, 1, tzinfo=UTC),
+                "@search.score": 2.5,
+            }
+        ]
+    )
+    provider = AzureImageSearchProvider(
+        settings=make_settings(),
+        search_client=fake_client,
+    )
+
+    response = await provider.search(ImageSearchRequest(query="ribbon"))
+
+    assert response.count == 1
+    assert response.results[0].model_dump() == {
+        "image_id": "image-1",
+        "image_url": "https://example.test/image-1.jpg",
+        "caption": "Ribbon cutting",
+        "description": "Officials cut a ribbon at city hall.",
+        "authors": "Photo Staff",
+        "capture_date": datetime(2024, 5, 1, tzinfo=UTC),
+        "score": 2.5,
+    }
+
+
+@pytest.mark.asyncio
+async def test_azure_image_provider_can_use_explicit_index_field_mapping() -> None:
+    field_mapping = AzureImageIndexFieldMapping(
+        image_id="asset_id",
+        image_url="url",
+        caption="title",
+        description="alt_text",
+        authors="credit",
+        capture_date="captured_at",
+        vector="alt_text_vector",
+    )
+    fake_client = FakeSearchClient(
+        [
+            {
+                "asset_id": "image-1",
+                "url": "https://example.test/image-1.jpg",
+                "title": "Ribbon cutting",
+                "alt_text": "Officials cut a ribbon at city hall.",
+                "credit": "Photo Staff",
+                "captured_at": datetime(2024, 5, 1, tzinfo=UTC),
+            }
+        ]
+    )
+    provider = AzureImageSearchProvider(
+        settings=make_settings(),
+        search_client=fake_client,
+        field_mapping=field_mapping,
+    )
+
+    response = await provider.search(ImageSearchRequest(query="ribbon"))
+
+    assert fake_client.last_kwargs is not None
+    assert fake_client.last_kwargs["select"] == [
+        "asset_id",
+        "url",
+        "title",
+        "alt_text",
+        "credit",
+        "captured_at",
+    ]
+    assert fake_client.last_kwargs["search_fields"] == ["alt_text"]
+    assert fake_client.last_kwargs["vector_queries"][0].fields == "alt_text_vector"
+    assert response.results[0].image_id == "image-1"
+    assert response.results[0].description == "Officials cut a ribbon at city hall."
+
+
+@pytest.mark.asyncio
+async def test_azure_image_provider_uses_hybrid_search_for_normal_search_text() -> None:
+    fake_client = FakeSearchClient([])
+    provider = AzureImageSearchProvider(
+        settings=make_settings(),
+        search_client=fake_client,
+    )
+
+    await provider.search(ImageSearchRequest(query="ribbon", limit=5))
+
+    assert fake_client.last_kwargs is not None
+    assert fake_client.last_kwargs["search_text"] == "ribbon"
+    assert fake_client.last_kwargs["search_fields"] == ["description"]
+    assert fake_client.last_kwargs["top"] == 5
+    assert fake_client.last_kwargs["query_type"] is not None
+    assert fake_client.last_kwargs["semantic_configuration_name"] == "image-semantic"
+    assert fake_client.last_kwargs["vector_queries"][0].fields == "description_vector"
+
+
+@pytest.mark.asyncio
+async def test_azure_image_provider_omits_vector_query_for_search_everything() -> None:
+    fake_client = FakeSearchClient([])
+    provider = AzureImageSearchProvider(
+        settings=make_settings(),
+        search_client=fake_client,
+    )
+
+    await provider.search(ImageSearchRequest(query="*"))
 
     assert fake_client.last_kwargs is not None
     assert fake_client.last_kwargs["search_text"] == "*"

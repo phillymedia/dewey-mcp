@@ -5,28 +5,28 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-from dewey_mcp.models import SearchRequest
+from dewey_mcp.models import ImageSearchRequest, SearchRequest
 
 
 @dataclass(frozen=True)
 class AzureFilterFieldNames:
     """Azure field names used for filter translation."""
 
-    publish_date: str
+    date: str
     authors: str
 
 
 def build_azure_filter(
-    request: SearchRequest,
+    request: SearchRequest | ImageSearchRequest,
     field_names: AzureFilterFieldNames,
 ) -> str | None:
-    """Build an Azure AI Search OData filter from a SearchRequest."""
+    """Build an Azure AI Search OData filter from a search request."""
 
     clauses = [
         clause
         for clause in (
             _published_date_clause(
-                request.start_date, request.end_date, field_names.publish_date
+                request.start_date, request.end_date, field_names.date
             ),
             _authors_clause(request.authors, field_names.authors),
         )

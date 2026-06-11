@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     azure_search_semantic_configuration: str = Field(
         alias="AZURE_SEARCH_SEMANTIC_CONFIGURATION"
     )
+    azure_image_search_index_name: str = Field(alias="AZURE_IMAGE_SEARCH_INDEX_NAME")
+    azure_image_search_semantic_configuration: str = Field(
+        alias="AZURE_IMAGE_SEARCH_SEMANTIC_CONFIGURATION"
+    )
     azure_search_api_key: SecretStr | None = Field(
         default=None,
         alias="AZURE_SEARCH_API_KEY",

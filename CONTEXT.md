@@ -8,8 +8,16 @@ Dewey MCP is a read-only gateway for agents that need to search a long-running a
 The collection of historical and current news articles that agents may search. It includes articles from 1978 to the present.
 _Avoid_: corpus, dataset, index
 
+**Image Archive**:
+The collection of image-backed archive materials that agents may search.
+_Avoid_: corpus, dataset, index
+
 **News Article**:
 A single published story in the **News Archive**. A **News Archive** contains many **News Articles**.
+_Avoid_: document, record, item
+
+**Image**:
+A single image-backed archive asset in the **Image Archive**.
 _Avoid_: document, record, item
 
 **Article Identifier**:
@@ -24,24 +32,44 @@ _Avoid_: snippet, passage, segment
 A stable identifier for one **Article Chunk**.
 _Avoid_: chunk key, row ID
 
+**Image Identifier**:
+A stable identifier for one **Image**.
+_Avoid_: image key, row ID
+
 **Published Date**:
 The date and time when a **News Article** was published.
 _Avoid_: timestamp, publication datetime
+
+**Capture Date**:
+The date and time when an **Image** was captured.
+_Avoid_: timestamp, capture datetime
 
 **Article Link**:
 The URL where a **News Article** can be accessed.
 _Avoid_: URL, href
 
+**Image Link**:
+The URL where an **Image** can be accessed.
+_Avoid_: URL, href
+
+**Caption**:
+The short display text or editorial caption associated with an **Image**.
+_Avoid_: title, label
+
+**Description**:
+The searchable text that describes an **Image**.
+_Avoid_: body, text blob
+
 **Author**:
-The credited writer or contributor for a **News Article**.
+The credited writer, contributor, or creator for a **News Article** or **Image**.
 _Avoid_: byline, creator
 
 **Read-only Gateway**:
-The boundary that lets agents query the **News Archive** without changing it. It does not ingest, update, delete, enrich, reindex, or administer **News Articles**.
+The boundary that lets agents query the **News Archive** and **Image Archive** without changing them. It does not ingest, update, delete, enrich, reindex, or administer **News Articles** or **Images**.
 _Avoid_: archive manager, ingestion service, admin service
 
 **Search Request**:
-A request from an agent to find **Article Chunks** in the **News Archive**. It includes **Search Text** and zero or more **Search Filters**.
+A request from an agent to find archive material in the **News Archive** or **Image Archive**. It includes **Search Text** and zero or more **Search Filters**.
 _Avoid_: query payload, search query
 
 **Search Text**:
@@ -57,7 +85,7 @@ A constraint that narrows which **Article Chunks** may be returned for a **Searc
 _Avoid_: facet, clause, predicate
 
 **Search Result**:
-An **Article Chunk** returned for a **Search Request**, together with the article information needed for an agent to judge relevance.
+Archive material returned for a **Search Request**, together with the information needed for an agent to judge relevance.
 _Avoid_: hit, match, row, article result
 
 ## Example Dialogue
