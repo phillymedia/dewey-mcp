@@ -7,6 +7,7 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import suppress
 from dataclasses import dataclass
+from pathlib import Path
 from time import monotonic
 from typing import Any
 
@@ -31,14 +32,13 @@ _RETRYABLE_STATUS_CODES = {408, 429, 500, 502, 503, 504}
 class AzureIndexFieldMapping:
     """Azure index field names used by the provider adapter."""
 
-    chunk_id: str
     chunk_text: str
+    sourcepage: str
     title: str
     vector: str
     link: str
     author: str
     published_date: str
-    article_id: str
 
     @property
     def filter_field_names(self) -> AzureFilterFieldNames:
@@ -50,8 +50,7 @@ class AzureIndexFieldMapping:
     @property
     def select_fields(self) -> list[str]:
         return [
-            self.chunk_id,
-            self.article_id,
+            self.sourcepage,
             self.title,
             self.published_date,
             self.author,
@@ -61,14 +60,13 @@ class AzureIndexFieldMapping:
 
 
 DEFAULT_AZURE_INDEX_FIELD_MAPPING = AzureIndexFieldMapping(
-    chunk_id="chunk_id",
     chunk_text="chunk",
+    sourcepage="sourcepage",
     title="headline",
     vector="text_vector",
     link="link",
     author="authors",
     published_date="publish_date",
-    article_id="parent_id",
 )
 
 
@@ -196,14 +194,12 @@ class AzureArchiveSearchProvider:
 
     def _map_result(self, document: dict[str, Any]) -> SearchResult:
         return SearchResult(
-            chunk_id=str(document[self.field_mapping.chunk_id]),
-            article_id=str(document[self.field_mapping.article_id]),
+            source_id=f"doc_{Path(document[self.field_mapping.sourcepage]).stem}",
             title=document.get(self.field_mapping.title),
             published_date=document.get(self.field_mapping.published_date),
             author=document.get(self.field_mapping.author),
-            link=document.get(self.field_mapping.link),
-            chunk_text=str(document[self.field_mapping.chunk_text]),
-            score=float(document.get("@search.score") or 0.0),
+            url=document.get(self.field_mapping.link),
+            text=str(document[self.field_mapping.chunk_text]),
         )
 
 

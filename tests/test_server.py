@@ -13,14 +13,12 @@ class FakeProvider:
         return SearchResponse.from_results(
             [
                 SearchResult(
-                    chunk_id="chunk-1",
-                    article_id="article-1",
+                    source_id="doc_article-1",
+                    text="Chunk text",
                     title="Title",
                     published_date=None,
                     author="Author",
-                    link="https://example.test/article-1",
-                    chunk_text="Chunk text",
-                    score=1.0,
+                    url="https://example.test/article-1",
                 )
             ]
         )
@@ -70,6 +68,14 @@ async def test_search_archive_tool_calls_provider_with_validated_request() -> No
     assert not response.isError
     assert response.structuredContent is not None
     assert response.structuredContent["count"] == 1
+    assert response.structuredContent["results"][0] == {
+        "source_id": "doc_article-1",
+        "text": "Chunk text",
+        "title": "Title",
+        "published_date": None,
+        "author": "Author",
+        "url": "https://example.test/article-1",
+    }
     assert provider.requests[0].query == "hostage"
     assert provider.requests[0].authors == ["George Will"]
     assert provider.requests[0].limit == 5

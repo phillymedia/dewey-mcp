@@ -56,14 +56,12 @@ async def test_azure_provider_maps_index_fields_to_result_contract() -> None:
     fake_client = FakeSearchClient(
         [
             {
-                "chunk_id": "chunk-1",
-                "parent_id": "article-1",
+                "sourcepage": "articles/article-1.pdf",
                 "headline": "Hostage crisis",
                 "publish_date": datetime(1979, 11, 15, tzinfo=UTC),
                 "authors": "Jane Reporter",
                 "link": "https://example.test/article-1",
                 "chunk": "Article chunk text",
-                "@search.score": 3.5,
             }
         ]
     )
@@ -76,34 +74,30 @@ async def test_azure_provider_maps_index_fields_to_result_contract() -> None:
 
     assert response.count == 1
     assert response.results[0].model_dump() == {
-        "chunk_id": "chunk-1",
-        "article_id": "article-1",
+        "source_id": "doc_article-1",
+        "text": "Article chunk text",
         "title": "Hostage crisis",
         "published_date": datetime(1979, 11, 15, tzinfo=UTC),
         "author": "Jane Reporter",
-        "link": "https://example.test/article-1",
-        "chunk_text": "Article chunk text",
-        "score": 3.5,
+        "url": "https://example.test/article-1",
     }
 
 
 @pytest.mark.asyncio
 async def test_azure_provider_can_use_explicit_index_field_mapping() -> None:
     field_mapping = AzureIndexFieldMapping(
-        chunk_id="archive_chunk_id",
         chunk_text="body_chunk",
+        sourcepage="source_page",
         title="title",
         vector="body_vector",
         link="url",
         author="byline",
         published_date="published_at",
-        article_id="archive_article_id",
     )
     fake_client = FakeSearchClient(
         [
             {
-                "archive_chunk_id": "chunk-1",
-                "archive_article_id": "article-1",
+                "source_page": "articles/article-1.pdf",
                 "title": "Hostage crisis",
                 "published_at": datetime(1979, 11, 15, tzinfo=UTC),
                 "byline": "Jane Reporter",
@@ -122,8 +116,7 @@ async def test_azure_provider_can_use_explicit_index_field_mapping() -> None:
 
     assert fake_client.last_kwargs is not None
     assert fake_client.last_kwargs["select"] == [
-        "archive_chunk_id",
-        "archive_article_id",
+        "source_page",
         "title",
         "published_at",
         "byline",
@@ -131,8 +124,8 @@ async def test_azure_provider_can_use_explicit_index_field_mapping() -> None:
         "body_chunk",
     ]
     assert fake_client.last_kwargs["vector_queries"][0].fields == "body_vector"
-    assert response.results[0].article_id == "article-1"
-    assert response.results[0].chunk_text == "Article chunk text"
+    assert response.results[0].source_id == "doc_article-1"
+    assert response.results[0].text == "Article chunk text"
 
 
 @pytest.mark.asyncio

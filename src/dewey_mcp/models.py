@@ -101,14 +101,12 @@ class SearchResult(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    chunk_id: str
-    article_id: str
+    source_id: str
+    text: str
     title: str | None = None
     published_date: datetime | None = None
     author: str | None = None
-    link: str | None = None
-    chunk_text: str
-    score: float
+    url: str | None = None
 
 
 class SearchResponse(BaseModel):
