@@ -12,8 +12,8 @@ The codebase, docs, and ADRs use a consistent vocabulary:
 | Term | Meaning |
 | --- | --- |
 | News Archive | The collection of historical and current news articles (1978 to present). |
-| News Article | A single published story. Identified by an `article_id`. |
-| Article Chunk | A searchable excerpt of a News Article. One article can have many chunks, each with a `chunk_id`. |
+| News Article | A single published story. |
+| Article Chunk | A searchable excerpt of a News Article. One article can have many chunks. |
 | Search Request | An agent's request: search text plus optional filters and a result limit. |
 | Search Result | One matching Article Chunk plus the article metadata needed to judge relevance. |
 | Search Everything | The explicit `*` query value: return chunks constrained only by filters. |
@@ -47,14 +47,12 @@ result is one Article Chunk:
 
 ```json
 {
-  "chunk_id": "...",
-  "article_id": "...",
+  "source_id": "doc_...",
+  "text": "...",
   "title": "...",
   "published_date": "1979-11-15T00:00:00Z",
   "author": "...",
-  "link": "...",
-  "chunk_text": "...",
-  "score": 1.23
+  "url": "..."
 }
 ```
 
@@ -104,7 +102,8 @@ Key behaviors to know:
   additionally probes Azure Search (document count) and returns `503` when the
   provider is unreachable.
 - **Logging never includes content.** Logs carry query length, filter fields,
-  limit, result count, and latency — never `chunk_text` or raw search text.
+  limit, result count, and latency — never returned result text or raw search
+  text.
 
 Design decisions are recorded as ADRs in [`docs/adr/`](docs/adr/). Read those
 first when changing the tool contract, provider behavior, or deployment shape.
@@ -143,14 +142,13 @@ The Azure index field mapping is defined in code
 environment. The default mapping expects these index fields:
 
 ```text
-chunk_id     -> chunk_id
-chunk        -> chunk_text
+sourcepage   -> source_id (filename stem prefixed with "doc_")
+chunk        -> text
 headline     -> title
 text_vector  -> (vector search)
-link         -> link
+link         -> url
 authors      -> author
 publish_date -> published_date
-parent_id    -> article_id
 ```
 
 ## Development
