@@ -1,4 +1,4 @@
-# Dewey MCP
+# Dewey MCP Domain Language
 
 Dewey MCP is a read-only gateway for agents that need to search long-running archives of news articles and images. This context defines the language used when discussing the archives and their search surfaces.
 

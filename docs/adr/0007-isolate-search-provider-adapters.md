@@ -1,13 +1,28 @@
-# Isolate Search Provider Adapters
+# ADR 0007: Isolate Search Provider Adapters
 
-Dewey MCP keeps provider-specific search code behind adapter modules. MCP tools and core models depend on Dewey-owned request and result types; Azure adapters are the only places that should know about Azure AI Search `SearchClient`, Azure query construction, semantic settings, vector profiles, and Azure response shapes.
+**Status:** Accepted
 
-This boundary keeps the initial Azure implementation testable and leaves room for future AWS search adapters without changing the MCP tool contract.
+## Context
 
-The codebase defines small provider-neutral search interfaces for the News Archive and Image Archive. A full plugin system is intentionally out of scope until there is more than one real backend implementation.
+The initial implementation uses Azure AI Search, but the public MCP contract and core tests should not depend on Azure SDK objects, query syntax, or response shapes. Provider calls are asynchronous network operations that can be slow or fail transiently.
 
-The provider-neutral search interface is asynchronous so the MCP server can handle concurrent search calls while waiting on provider I/O.
+## Decision
 
-Provider calls have an explicit configurable timeout, defaulting to 10 seconds for the whole search operation, so slow provider responses become bounded structured tool errors instead of unbounded MCP calls.
+MCP tools depend on Dewey-owned request and result models through small asynchronous protocols. Azure-specific clients, credentials, query construction, vector and semantic settings, field mappings, retries, and response mapping remain inside provider-facing modules.
 
-The Azure adapter uses the `backoff` library for transient provider failures, with at most two retries. If the provider still fails after retries are exhausted, the adapter returns a structured provider error to the MCP layer.
+Providers implement `search`, `probe`, and `close`. A provider operation has a configurable timeout, defaulting to 10 seconds. Azure calls retry transient failures with exponential backoff for at most three total attempts.
+
+A full dynamic plugin system remains out of scope until real backend diversity demonstrates the need.
+
+## Consequences
+
+- MCP behavior can be tested with fake providers and no Azure credentials.
+- A future backend can preserve the tool contract by implementing the same protocols.
+- Backend exceptions must be translated into Dewey errors at the adapter boundary.
+- Provider lifecycle and readiness are explicit parts of every implementation.
+
+## Related documentation
+
+- [Architecture](../architecture.md)
+- [Adding a search provider](../contributing.md#adding-a-search-provider)
+- [ADR 0008](0008-structured-tool-errors.md)
