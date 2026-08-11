@@ -96,6 +96,34 @@ class SearchRequest(BaseModel):
         return self
 
 
+class ImageSearchRequest(SearchRequest):
+    """Structured MCP Image Archive search request."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "query": "city hall press conference",
+                    "start_date": "2024-01-01",
+                    "end_date": "2024-12-31",
+                    "authors": ["Jane Doe"],
+                }
+            ]
+        },
+    )
+
+    start_date: date | None = Field(
+        default=None,
+        description="Inclusive lower bound for captured_date, in YYYY-MM-DD format.",
+    )
+
+    end_date: date | None = Field(
+        default=None,
+        description="Inclusive upper bound for captured_date, in YYYY-MM-DD format.",
+    )
+
+
 class SearchResult(BaseModel):
     """One matching Article Chunk."""
 
@@ -119,4 +147,36 @@ class SearchResponse(BaseModel):
 
     @classmethod
     def from_results(cls, results: list[SearchResult]) -> SearchResponse:
+        return cls(results=results, count=len(results))
+
+
+class ImageSearchResult(BaseModel):
+    """One matching Archived Image."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    image_url: str | None = None
+    thumbnail_url: str | None = None
+    screen_url: str | None = None
+    authors: str | None = None
+    caption: str | None = None
+    description: str | None = None
+    created_date: datetime | None = None
+    captured_date: datetime | None = None
+
+
+class ImageSearchResponse(BaseModel):
+    """Structured MCP Image Archive search response."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    results: list[ImageSearchResult]
+    count: int
+
+    @classmethod
+    def from_results(
+        cls,
+        results: list[ImageSearchResult],
+    ) -> ImageSearchResponse:
         return cls(results=results, count=len(results))

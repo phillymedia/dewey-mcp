@@ -38,6 +38,7 @@ def make_settings() -> Settings:
     return Settings(
         azure_search_endpoint="https://example.search.windows.net",
         azure_search_index_name="archive",
+        azure_image_search_index_name="inq-betadam-images",
         azure_search_semantic_configuration="semantic",
         azure_search_api_key="secret",
     )

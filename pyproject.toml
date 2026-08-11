@@ -1,7 +1,7 @@
 [project]
 name = "dewey-mcp"
 version = "0.1.0"
-description = "MCP server for searching a read-only news archive."
+description = "MCP server for searching read-only news and image archives."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

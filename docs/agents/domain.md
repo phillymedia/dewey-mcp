@@ -1,35 +1,43 @@
 # Domain Docs
 
-How the engineering skills should consume this repo's domain documentation when exploring the codebase.
+How engineering agents should consume this repository's domain documentation when exploring the codebase.
 
 ## Before exploring, read these
 
-- **`CONTEXT.md`** at the repo root.
-- **`docs/adr/`** for ADRs that touch the area you're about to work in.
+- **`CONTEXT.md`** at the repository root.
+- **`docs/adr/`** for decisions that touch the area being changed.
 
-If any of these files don't exist, **proceed silently**. Don't flag their absence; don't suggest creating them upfront. The producer skill (`/grill-with-docs`) creates them lazily when terms or decisions actually get resolved.
+If one of these sources does not exist, proceed silently. Do not suggest creating documentation before the relevant language or decision has been resolved.
 
 ## File structure
 
-Single-context repo:
+This is a single-context repository:
 
 ```text
 /
 |-- CONTEXT.md
-|-- docs/adr/
-|   |-- 0001-event-sourced-orders.md
-|   `-- 0002-postgres-for-write-model.md
+|-- docs/
+|   |-- architecture.md
+|   |-- contributing.md
+|   |-- getting-started.md
+|   |-- operations.md
+|   |-- tool-reference.md
+|   `-- adr/
+|       |-- README.md
+|       `-- 0001-typed-search-filters.md
 `-- src/
 ```
 
+`CONTEXT.md` owns domain vocabulary. The task-oriented guides under `docs/` describe current behavior. ADRs explain why durable constraints exist. Prefer links between those layers over repeating the same facts.
+
 ## Use the glossary's vocabulary
 
-When your output names a domain concept (in an issue title, a refactor proposal, a hypothesis, a test name), use the term as defined in `CONTEXT.md`. Don't drift to synonyms the glossary explicitly avoids.
+When output names a domain concept in an issue title, refactor proposal, hypothesis, or test name, use the term defined in `CONTEXT.md`. Do not drift to a synonym the glossary explicitly avoids.
 
-If the concept you need isn't in the glossary yet, that's a signal -- either you're inventing language the project doesn't use (reconsider) or there's a real gap (note it for `/grill-with-docs`).
+If a needed concept is missing, reconsider whether the term belongs to this domain. If it represents a real gap, note it for the domain-documentation workflow.
 
 ## Flag ADR conflicts
 
-If your output contradicts an existing ADR, surface it explicitly rather than silently overriding:
+If proposed work contradicts an accepted ADR, surface the conflict instead of silently overriding it. For example:
 
-> _Contradicts ADR-0007 (event-sourced orders) -- but worth reopening because..._
+> _Contradicts ADR 0003 (Azure hybrid search), but worth reopening because the replacement provider has no vector capability._
