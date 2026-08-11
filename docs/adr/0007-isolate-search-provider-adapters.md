@@ -1,10 +1,10 @@
 # Isolate Search Provider Adapters
 
-Dewey MCP keeps provider-specific search code behind adapter modules. The MCP tool and core models depend on Dewey-owned request and result types; the Azure adapter is the only place that should know about Azure AI Search `SearchClient`, Azure query construction, semantic settings, vector profiles, and Azure response shapes.
+Dewey MCP keeps provider-specific search code behind adapter modules. MCP tools and core models depend on Dewey-owned request and result types; Azure adapters are the only places that should know about Azure AI Search `SearchClient`, Azure query construction, semantic settings, vector profiles, and Azure response shapes.
 
 This boundary keeps the initial Azure implementation testable and leaves room for future AWS search adapters without changing the MCP tool contract.
 
-The codebase should define a small provider-neutral search interface now and implement only the Azure adapter in the first version. A full plugin system is intentionally out of scope until there is more than one real provider implementation.
+The codebase defines small provider-neutral search interfaces for the News Archive and Image Archive. A full plugin system is intentionally out of scope until there is more than one real backend implementation.
 
 The provider-neutral search interface is asynchronous so the MCP server can handle concurrent search calls while waiting on provider I/O.
 

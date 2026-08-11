@@ -1,5 +1,5 @@
 from dewey_mcp.filters import AzureFilterFieldNames, build_azure_filter
-from dewey_mcp.models import SearchRequest
+from dewey_mcp.models import ImageSearchRequest, SearchRequest
 
 FIELD_NAMES = AzureFilterFieldNames(publish_date="publish_date", authors="authors")
 
@@ -61,3 +61,25 @@ def test_build_azure_filter_returns_none_for_no_filters() -> None:
     request = SearchRequest(query="election")
 
     assert build_azure_filter(request, FIELD_NAMES) is None
+
+
+def test_build_azure_filter_maps_image_dates_to_captured_date() -> None:
+    request = ImageSearchRequest(
+        query="photo",
+        start_date="2024-01-01",
+        end_date="2024-01-31",
+        authors=["Jane Doe", "John Doe"],
+    )
+    image_fields = AzureFilterFieldNames(
+        publish_date="captured_date",
+        authors="authors",
+    )
+
+    expression = build_azure_filter(request, image_fields)
+
+    assert expression == (
+        "(captured_date ge 2024-01-01T00:00:00Z "
+        "and captured_date lt 2024-02-01T00:00:00Z) "
+        "and (search.ismatch('Jane Doe', 'authors') "
+        "or search.ismatch('John Doe', 'authors'))"
+    )
