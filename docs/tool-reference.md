@@ -85,9 +85,14 @@ Example response:
     {
       "id": "image-1",
       "image_url": "https://example.test/image.jpg",
-      "thumbnail_url": "https://example.test/thumbnail.jpg",
       "screen_url": "https://example.test/screen.jpg",
+      "title": "City hall press conference",
+      "original_filename": "city-hall.jpg",
       "authors": "Jane Photographer",
+      "credit": "Example News",
+      "byline": "Jane Photographer / Example News",
+      "ingest_source": "DAM",
+      "source": "Staff",
       "caption": "City hall press conference",
       "description": "Officials speak at a lectern.",
       "created_date": "2024-01-02T10:00:00Z",
@@ -102,15 +107,22 @@ Example response:
 | --- | --- | --- |
 | `id` | string | Required Image Identifier. |
 | `image_url` | string or null | Link to the original image. |
-| `thumbnail_url` | string or null | Link to a thumbnail rendition. |
-| `screen_url` | string or null | Link to a screen-sized rendition. |
+| `screen_url` | string or null | Link to the screen-sized rendition; use this for image previews. |
+| `title` | string or null | Archived Image title. |
+| `original_filename` | string or null | Original image filename. |
 | `authors` | string or null | Author or photographer metadata. |
+| `credit` | string or null | Image credit supplied by the archive. |
+| `byline` | string or null | Image byline supplied by the archive. |
+| `ingest_source` | string or null | Ingest source supplied by the archive. |
+| `source` | string or null | Image source supplied by the archive. |
 | `caption` | string or null | Image caption. |
 | `description` | string or null | Searchable image description. |
 | `created_date` | datetime or null | Created Date supplied by the archive. |
 | `captured_date` | datetime or null | Captured Date used by date filters. |
 
-Ordinary requests combine keyword search over `authors`, `caption`, and `description` with vector retrieval over `description_vector`. The image index has no semantic ranking configuration. Search Everything applies only filters and the limit.
+The v2 schema consolidates preview links into `screen_url`; `thumbnail_url` is no longer returned. Metadata and links may be null when absent from the archive.
+
+Ordinary requests combine keyword search over `title`, `original_filename`, `authors`, `credit`, `byline`, `caption`, and `description` with vector retrieval over `description_vector`. The image index has no semantic ranking configuration. Search Everything applies only filters and the limit. Author filters continue to match `authors`.
 
 ## Empty results and errors
 

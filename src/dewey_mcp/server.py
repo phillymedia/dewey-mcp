@@ -151,7 +151,10 @@ def create_mcp(
             ),
         ] = DEFAULT_SEARCH_LIMIT,
     ) -> CallToolResult:
-        """Search the Image Archive and return matching Archived Images."""
+        """Search the Image Archive and return matching Archived Images.
+
+        Use screen_url for image previews and image_url for the original image.
+        """
 
         request_started = monotonic()
         try:

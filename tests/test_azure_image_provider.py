@@ -58,7 +58,7 @@ def make_settings(**updates: object) -> Settings:
     values: dict[str, object] = {
         "azure_search_endpoint": "https://example.search.windows.net",
         "azure_search_index_name": "archive",
-        "azure_image_search_index_name": "inq-betadam-images",
+        "azure_image_search_index_name": "inq-betadam-images-v2",
         "azure_search_semantic_configuration": "semantic",
         "azure_search_api_key": "secret",
     }
@@ -82,7 +82,7 @@ def test_image_provider_uses_distinct_configured_index(
 
     assert provider.search_client is fake_client
     assert captured["endpoint"] == "https://example.search.windows.net"
-    assert captured["index_name"] == "inq-betadam-images"
+    assert captured["index_name"] == "inq-betadam-images-v2"
 
 
 async def test_image_provider_builds_keyword_and_vector_search() -> None:
@@ -101,7 +101,15 @@ async def test_image_provider_builds_keyword_and_vector_search() -> None:
 
     kwargs = fake_client.search_calls[0]
     assert kwargs["search_text"] == "city hall"
-    assert kwargs["search_fields"] == ["authors", "caption", "description"]
+    assert kwargs["search_fields"] == [
+        "title",
+        "original_filename",
+        "authors",
+        "credit",
+        "byline",
+        "caption",
+        "description",
+    ]
     assert kwargs["filter"] == (
         "(captured_date ge 2024-01-01T00:00:00Z "
         "and captured_date lt 2024-02-01T00:00:00Z) "
@@ -112,9 +120,14 @@ async def test_image_provider_builds_keyword_and_vector_search() -> None:
     assert kwargs["select"] == [
         "id",
         "image_url",
-        "thumbnail_url",
         "screen_url",
+        "title",
+        "original_filename",
         "authors",
+        "credit",
+        "byline",
+        "ingest_source",
+        "source",
         "caption",
         "description",
         "created_date",
@@ -154,9 +167,14 @@ async def test_image_provider_maps_exact_result_contract() -> None:
                 {
                     "id": "image-1",
                     "image_url": "https://example.test/image.jpg",
-                    "thumbnail_url": "https://example.test/thumb.jpg",
                     "screen_url": "https://example.test/screen.jpg",
+                    "title": "City hall",
+                    "original_filename": "city-hall.jpg",
                     "authors": "Jane Doe",
+                    "credit": "Example News",
+                    "byline": "Jane Doe / Example News",
+                    "ingest_source": "DAM",
+                    "source": "Staff",
                     "caption": "A city hall press conference",
                     "description": "Officials speak at a lectern.",
                     "created_date": created,
@@ -173,9 +191,14 @@ async def test_image_provider_maps_exact_result_contract() -> None:
     assert response.results[0].model_dump() == {
         "id": "image-1",
         "image_url": "https://example.test/image.jpg",
-        "thumbnail_url": "https://example.test/thumb.jpg",
         "screen_url": "https://example.test/screen.jpg",
+        "title": "City hall",
+        "original_filename": "city-hall.jpg",
         "authors": "Jane Doe",
+        "credit": "Example News",
+        "byline": "Jane Doe / Example News",
+        "ingest_source": "DAM",
+        "source": "Staff",
         "caption": "A city hall press conference",
         "description": "Officials speak at a lectern.",
         "created_date": created,
@@ -187,17 +210,37 @@ async def test_image_provider_supports_explicit_field_mapping() -> None:
     mapping = AzureImageIndexFieldMapping(
         id="image_id",
         image_url="original",
-        thumbnail_url="thumbnail",
         screen_url="screen",
-        authors="byline",
-        caption="title",
+        title="headline",
+        original_filename="filename",
+        authors="photographers",
+        credit="attribution",
+        byline="display_byline",
+        ingest_source="import_source",
+        source="image_source",
+        caption="summary",
         description="alt_text",
         description_vector="alt_text_vector",
         created_date="created_at",
         captured_date="captured_at",
     )
     fake_client = FakeSearchClient(
-        [[{"image_id": "image-1", "alt_text": "Officials speaking."}]]
+        [
+            [
+                {
+                    "image_id": "image-1",
+                    "screen": "https://example.test/screen.jpg",
+                    "headline": "City hall",
+                    "filename": "city-hall.jpg",
+                    "photographers": "Jane Doe",
+                    "attribution": "Example News",
+                    "display_byline": "Jane Doe / Example News",
+                    "import_source": "DAM",
+                    "image_source": "Staff",
+                    "alt_text": "Officials speaking.",
+                }
+            ]
+        ]
     )
     provider = AzureImageSearchProvider(
         make_settings(),
@@ -208,20 +251,41 @@ async def test_image_provider_supports_explicit_field_mapping() -> None:
     response = await provider.search(ImageSearchRequest(query="officials"))
 
     kwargs = fake_client.search_calls[0]
-    assert kwargs["search_fields"] == ["byline", "title", "alt_text"]
+    assert kwargs["search_fields"] == [
+        "headline",
+        "filename",
+        "photographers",
+        "attribution",
+        "display_byline",
+        "summary",
+        "alt_text",
+    ]
     assert kwargs["vector_queries"][0].fields == "alt_text_vector"
     assert kwargs["select"] == [
         "image_id",
         "original",
-        "thumbnail",
         "screen",
-        "byline",
-        "title",
+        "headline",
+        "filename",
+        "photographers",
+        "attribution",
+        "display_byline",
+        "import_source",
+        "image_source",
+        "summary",
         "alt_text",
         "created_at",
         "captured_at",
     ]
     assert response.results[0].id == "image-1"
+    assert response.results[0].screen_url == "https://example.test/screen.jpg"
+    assert response.results[0].title == "City hall"
+    assert response.results[0].original_filename == "city-hall.jpg"
+    assert response.results[0].authors == "Jane Doe"
+    assert response.results[0].credit == "Example News"
+    assert response.results[0].byline == "Jane Doe / Example News"
+    assert response.results[0].ingest_source == "DAM"
+    assert response.results[0].source == "Staff"
     assert response.results[0].description == "Officials speaking."
 
 
