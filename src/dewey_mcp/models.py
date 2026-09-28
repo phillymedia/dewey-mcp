@@ -157,9 +157,17 @@ class ImageSearchResult(BaseModel):
 
     id: str
     image_url: str | None = None
-    thumbnail_url: str | None = None
-    screen_url: str | None = None
+    screen_url: str | None = Field(
+        default=None,
+        description="Link to the screen-sized rendition used for image previews.",
+    )
+    title: str | None = None
+    original_filename: str | None = None
     authors: str | None = None
+    credit: str | None = None
+    byline: str | None = None
+    ingest_source: str | None = None
+    source: str | None = None
     caption: str | None = None
     description: str | None = None
     created_date: datetime | None = None

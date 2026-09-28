@@ -36,9 +36,14 @@ class AzureImageIndexFieldMapping:
 
     id: str
     image_url: str
-    thumbnail_url: str
     screen_url: str
+    title: str
+    original_filename: str
     authors: str
+    credit: str
+    byline: str
+    ingest_source: str
+    source: str
     caption: str
     description: str
     description_vector: str
@@ -54,16 +59,29 @@ class AzureImageIndexFieldMapping:
 
     @property
     def keyword_fields(self) -> list[str]:
-        return [self.authors, self.caption, self.description]
+        return [
+            self.title,
+            self.original_filename,
+            self.authors,
+            self.credit,
+            self.byline,
+            self.caption,
+            self.description,
+        ]
 
     @property
     def select_fields(self) -> list[str]:
         return [
             self.id,
             self.image_url,
-            self.thumbnail_url,
             self.screen_url,
+            self.title,
+            self.original_filename,
             self.authors,
+            self.credit,
+            self.byline,
+            self.ingest_source,
+            self.source,
             self.caption,
             self.description,
             self.created_date,
@@ -74,9 +92,14 @@ class AzureImageIndexFieldMapping:
 DEFAULT_AZURE_IMAGE_INDEX_FIELD_MAPPING = AzureImageIndexFieldMapping(
     id="id",
     image_url="image_url",
-    thumbnail_url="thumbnail_url",
     screen_url="screen_url",
+    title="title",
+    original_filename="original_filename",
     authors="authors",
+    credit="credit",
+    byline="byline",
+    ingest_source="ingest_source",
+    source="source",
     caption="caption",
     description="description",
     description_vector="description_vector",
@@ -217,9 +240,14 @@ class AzureImageSearchProvider:
         return ImageSearchResult(
             id=document[self.field_mapping.id],
             image_url=document.get(self.field_mapping.image_url),
-            thumbnail_url=document.get(self.field_mapping.thumbnail_url),
             screen_url=document.get(self.field_mapping.screen_url),
+            title=document.get(self.field_mapping.title),
+            original_filename=document.get(self.field_mapping.original_filename),
             authors=document.get(self.field_mapping.authors),
+            credit=document.get(self.field_mapping.credit),
+            byline=document.get(self.field_mapping.byline),
+            ingest_source=document.get(self.field_mapping.ingest_source),
+            source=document.get(self.field_mapping.source),
             caption=document.get(self.field_mapping.caption),
             description=document.get(self.field_mapping.description),
             created_date=document.get(self.field_mapping.created_date),

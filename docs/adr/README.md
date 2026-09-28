@@ -20,6 +20,7 @@ All listed decisions are accepted. If a future change reverses one, add a new AD
 | [0003](0003-use-azure-hybrid-search.md) | Use fixed Azure hybrid and semantic search for the News Archive. |
 | [0007](0007-isolate-search-provider-adapters.md) | Keep provider mechanics behind asynchronous Dewey-owned interfaces. |
 | [0017](0017-image-hybrid-search-and-dual-readiness.md) | Add separate Image Archive hybrid search and require both providers for readiness. |
+| [0018](0018-align-image-search-with-v2-schema.md) | Use one preview link and expose the v2 image metadata and searchable fields. |
 
 ## Runtime, operations, and security
 

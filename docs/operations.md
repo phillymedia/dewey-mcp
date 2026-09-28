@@ -12,7 +12,7 @@ Dewey reads environment variables through Pydantic settings and fails before sta
 | --- | --- |
 | `AZURE_SEARCH_ENDPOINT` | Azure AI Search service endpoint shared by both providers. |
 | `AZURE_SEARCH_INDEX_NAME` | News Archive index name. |
-| `AZURE_IMAGE_SEARCH_INDEX_NAME` | Image Archive index name. |
+| `AZURE_IMAGE_SEARCH_INDEX_NAME` | Image Archive index name (`inq-betadam-images-v2` for the current schema). |
 | `AZURE_SEARCH_SEMANTIC_CONFIGURATION` | Semantic configuration used by News Archive search. |
 
 `AZURE_IMAGE_SEARCH_INDEX_NAME` has no application default. The example name used in tests is not a runtime default.

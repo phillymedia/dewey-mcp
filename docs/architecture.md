@@ -81,9 +81,9 @@ Ordinary searches combine keyword search, vector retrieval through the index vec
 
 ### Image Archive
 
-Ordinary searches combine keyword search over `authors`, `caption`, and `description` with vector retrieval over `description_vector`. The image index does not use semantic ranking.
+The adapter targets the `inq-betadam-images-v2` schema. Ordinary searches combine keyword search over `title`, `original_filename`, `authors`, `credit`, `byline`, `caption`, and `description` with vector retrieval over `description_vector`. The image index does not use semantic ranking.
 
-The adapter returns `id`, `image_url`, `thumbnail_url`, `screen_url`, `authors`, `caption`, `description`, `created_date`, and `captured_date`. Captured Date drives date filtering.
+The adapter returns all retrievable metadata: `id`, `image_url`, `screen_url`, `title`, `original_filename`, `authors`, `credit`, `byline`, `ingest_source`, `source`, `caption`, `description`, `created_date`, and `captured_date`. `screen_url` supplies image previews; `image_url` links to the original. Captured Date drives date filtering, and Author filters match `authors`. The non-retrievable `description_vector` is used only for vector retrieval.
 
 For both providers, Search Everything omits vector retrieval. Date filters are translated to half-open Azure ranges so an inclusive end date covers the full day. Author values are escaped before being passed to Azure `search.ismatch` expressions.
 
